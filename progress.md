@@ -5,13 +5,13 @@
 ## Overall status
 
 - [x] Phase 1 — Foundation, design system, auth, database and API skeleton
-- [ ] Phase 2 — Subjects, syllabus, tasks, calendar and intelligent planner
+- [x] Phase 2 — Subjects, syllabus, tasks, calendar and intelligent planner
 - [ ] Phase 3 — Private document library, ingestion and embeddings
 - [ ] Phase 4 — RAG assistant, conversations, retrieval and citations
 - [ ] Phase 5 — Analytics, dashboard completion, notifications, settings and visual polish
 - [ ] Phase 6 — Integration, security, testing, setup documentation and release readiness
 
-**Current phase:** Phase 1 Completed (Ready for Phase 2)  
+**Current phase:** Phase 2 Completed (Ready for Phase 3)  
 **Last updated:** 2026-10-11  
 **Repository/branch:** main  
 **Development environment:** Python 3.13.7, Node v22.19.0, npm 10.9.3, Vite 6.4.4, FastAPI 0.143.0, Uvicorn 0.54.0
@@ -40,19 +40,78 @@
   - Stitch Screen 2: `DashboardPage.tsx` (welcome banner, 4 metric cards, smart study schedule, weekly focus chart, subject progress, quick RAG query box, deadlines, activity timeline).
   - Route placeholders for all 8 application screens.
 **Verification evidence:**
-- Backend unit tests (`pytest -c backend/pytest.ini backend/tests -v`): 6/6 tests passed (health checks, token validation, expired token rejection, missing token handling, valid authentication).
+- Backend unit tests (`pytest -c backend/pytest.ini backend/tests -v`): 6/6 tests passed.
 - Backend dry-run import: `app.main.app.title` loaded successfully ("PrepAI").
-- Frontend production build (`npm run build`): TypeScript compiled cleanly, Vite bundled production assets (`dist/index.html`, `dist/assets/index-*.css`, `dist/assets/index-*.js`) in 6.15s with zero errors.
+- Frontend production build (`npm run build`): TypeScript compiled cleanly, Vite bundled production assets in 6.15s with zero errors.
 **Blockers/risks:** Supabase live credentials must be supplied in `.env` for production database operations; local/dev mode gracefully handles unconfigured credentials for visual inspection.  
 **Exit criteria:** All Phase 1 exit criteria met.
 
 
 ### Phase 2 — Study planning, tasks and calendar
-**Status:** Not started  
-**Implemented:** —  
-**Verification evidence:** —  
-**Blockers/risks:** Planner behavior must be tested against impossible and time-zone-sensitive schedules.  
-**Exit criteria:** Refer to `phasewiseprompt.md` Phase 2.
+**Status:** Complete  
+**Implemented:**
+- **Database Migration (`backend/migrations/00002_create_study_planner_tables.sql`):**
+  - Created 6 tables: `subjects`, `syllabus_topics`, `tasks`, `assessments`, `availability_rules`, and `study_sessions`.
+  - Full relational integrity: ON DELETE CASCADE foreign keys, check constraints on priority, status, category, difficulty, days of week.
+  - Performance indexing on `(user_id, status)` and `(user_id, start_time, end_time)`.
+  - Strict Supabase Row Level Security (RLS) enabled on all 6 tables enforcing `auth.uid() = user_id`.
+- **FastAPI Schemas & Repository Layer:**
+  - `backend/app/schemas/planner.py`: Pydantic models for subjects, topics, tasks, assessments, availability rules, study sessions, and planner request/preview DTOs.
+  - `backend/app/repositories/planner_repo.py`: User-isolated data store enforcing ownership scoping across all CRUD operations.
+- **Deterministic Scheduling Engine (`backend/app/services/planner/`):**
+  - `priority.py`: Deterministic multi-factor scoring formula: `0.5 * Urgency + 0.3 * Importance + 0.2 * Difficulty`.
+  - `scheduler.py`: Greedy slot-filling algorithm respecting user availability windows, session duration (default 45m), break intervals (default 15m), and due date deadlines. Generates human-readable reasoning logs and reports unscheduled items when constraints are exceeded.
+  - Preserves completed sessions across replanning cycles (`replan_schedule`).
+- **RESTful API Endpoints (`/api/v1/`):**
+  - `/subjects` and `/subjects/{subject_id}/topics` CRUD.
+  - `/tasks` CRUD with status and category filtering.
+  - `/assessments` CRUD for midterms, finals, and quizzes.
+  - `/availability` (GET, PUT) for recurring weekly study hours.
+  - `/sessions` (GET, POST, PUT, DELETE) with status transitions (`planned` -> `in_progress` -> `completed` / `skipped`).
+  - `/planner/generate` (preview timetable with decision reasoning & unscheduled warnings).
+  - `/planner/apply` (persist proposed sessions).
+  - `/planner/replan` (clears future planned sessions while preserving completed ones, re-runs greedy scheduler).
+  - `/calendar/events` (aggregates sessions, deadlines, and exams into unified timeline).
+  - `/dashboard/summary` (computes live hours, task counts, streak, next exam, today's sessions, and topic completion percentages).
+- **Frontend Features & Components (`frontend/src/features/`):**
+  - `types/planner.ts`: Complete TypeScript interfaces matching backend models.
+  - `features/tasks/TasksPage.tsx`: Interactive task management with status tabs (All, Today, Upcoming, Overdue, Completed), search filter, quick status toggling, and delete actions.
+  - `features/tasks/TaskModal.tsx`: Create task modal with priority, duration, category, and due date.
+  - `features/subjects/SubjectModal.tsx` & `TopicModal.tsx`: Create subject and topic modals with color picker, difficulty, importance, and duration.
+  - `features/planner/PlannerPage.tsx`:
+    - Full scheduler control strip (Horizon, Session duration, Break duration).
+    - Availability Rules modal for weekly active days and time windows.
+    - Plan Preview Modal displaying proposed sessions, priority scores, reasoning log, and unscheduled item warnings.
+    - Session list with live status transitions (Start, Complete, Skip, Delete).
+    - Replan CTA calling `/planner/replan`.
+  - `features/calendar/CalendarPage.tsx`:
+    - Synchronized timetable with Week (7-day columns) and Day views.
+    - Date navigation (Today, Prev, Next) with `date-fns`.
+    - Color-coded badges for study sessions (`#43E58B`), exams (`#8353E2`), and deadlines (`#E59F43`).
+    - Selected day agenda drawer with quick Start/Complete session actions.
+  - `features/dashboard/DashboardPage.tsx`:
+    - Connected to live `/dashboard/summary` API endpoint.
+    - Real-time study hours with radial SVG progress ring.
+    - Live tasks completed counter, upcoming exam alerts, and streak metrics.
+    - Today's live study sessions with interactive status updates.
+    - Subject-wise syllabus progress bars derived from real topic completion rates.
+    - Empty states with quick action CTAs when no sessions or subjects exist yet.
+**Verification evidence:**
+- Backend pytest suite (`pytest -c backend/pytest.ini backend/tests -v`): **13/13 passed in 1.20s**:
+  - `test_priority_score_urgency_ordering` PASSED
+  - `test_priority_score_importance_difficulty` PASSED
+  - `test_scheduler_fits_within_availability` PASSED
+  - `test_scheduler_handles_impossible_schedule_and_reports_unscheduled` PASSED
+  - `test_scheduler_preserves_completed_sessions` PASSED
+  - `test_two_user_data_isolation` PASSED (verifies User A vs User B data isolation)
+  - `test_full_planner_workflow_api` PASSED (end-to-end CRUD, plan preview, apply, replan, calendar, dashboard)
+  - `test_auth_me_*` (4 tests) PASSED
+  - `test_health_*` (2 tests) PASSED
+- Frontend TypeScript & production build (`npm run build`):
+  - Zero TypeScript compilation errors.
+  - Vite bundled production build successfully in 12.14s (`dist/index.html`, `dist/assets/index-kLzGdSSY.css`, `dist/assets/index-DjV8abzI.js`).
+**Blockers/risks:** None. Phase 2 exit criteria are fully satisfied.  
+**Exit criteria:** All Phase 2 exit criteria met. Proceed to Phase 3.
 
 ### Phase 3 — Document ingestion and embeddings
 **Status:** Not started  
