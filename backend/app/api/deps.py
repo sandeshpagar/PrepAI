@@ -36,7 +36,7 @@ async def get_current_user(
             "role": payload.get("role", "authenticated"),
             "user_metadata": payload.get("user_metadata", {}),
         }
-    except HTTPException:
+    except Exception:
         if settings.ENVIRONMENT == "development":
             return {
                 "id": "dev-student-1",

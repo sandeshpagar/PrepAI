@@ -19,15 +19,16 @@ def verify_supabase_token(token: str) -> Dict[str, Any]:
     # If secret is set, verify cryptographic signature
     if settings.SUPABASE_JWT_SECRET:
         try:
-            # Supabase default algorithm is HS256 with JWT secret
             unverified_header = jwt.get_unverified_header(token)
             alg = unverified_header.get("alg", "HS256")
+            if alg != "HS256":
+                raise jwt.InvalidAlgorithmError(f"Unsupported algorithm '{alg}', expected HS256")
             payload = jwt.decode(
                 token,
                 settings.SUPABASE_JWT_SECRET,
-                algorithms=[alg],
+                algorithms=["HS256"],
                 audience="authenticated",
-                options={"verify_aud": False}, # Supabase tokens usually have aud='authenticated'
+                options={"verify_aud": False},  # Supabase tokens usually have aud='authenticated'
             )
         except jwt.ExpiredSignatureError:
             raise HTTPException(
@@ -35,7 +36,7 @@ def verify_supabase_token(token: str) -> Dict[str, Any]:
                 detail="Authentication token has expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except jwt.InvalidTokenError as e:
+        except (jwt.InvalidTokenError, ValueError, TypeError) as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid authentication token: {str(e)}",
