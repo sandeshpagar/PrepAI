@@ -31,6 +31,8 @@ export const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingSessionId, setUpdatingSessionId] = useState<string | null>(null);
+  const [quickQuery, setQuickQuery] = useState('');
+
 
   const fetchSummary = async () => {
     try {
@@ -488,32 +490,50 @@ export const DashboardPage: React.FC = () => {
             <div className="relative flex items-center">
               <input
                 type="text"
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
                 placeholder="Ask anything from your uploaded study materials..."
                 className="w-full pl-3 pr-10 py-2 rounded-lg bg-surface-container-lowest/80 text-xs text-on-surface placeholder:text-on-surface-variant/50 border border-white/5 focus:outline-none focus:border-secondary transition-all"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') navigate('/assistant');
+                  if (e.key === 'Enter' && quickQuery.trim()) {
+                    navigate(`/assistant?q=${encodeURIComponent(quickQuery.trim())}`);
+                  }
                 }}
               />
               <button
                 className="absolute right-2 p-1.5 rounded-lg bg-primary-container text-on-primary-container hover:bg-primary-fixed-dim transition-colors cursor-pointer"
                 title="Send"
-                onClick={() => navigate('/assistant')}
+                onClick={() => {
+                  if (quickQuery.trim()) {
+                    navigate(`/assistant?q=${encodeURIComponent(quickQuery.trim())}`);
+                  } else {
+                    navigate('/assistant');
+                  }
+                }}
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <div className="flex flex-wrap gap-1.5 mt-1">
-              {['⚡ Summarize B+ Trees', '🔍 TCP Congestion Formula', '📝 Generate 5 Quiz Questions'].map((chip) => (
-                <button
-                  key={chip}
-                  onClick={() => navigate('/assistant')}
-                  className="px-2 py-1 rounded bg-surface-container-highest/60 hover:bg-surface-container-high text-on-surface font-mono text-[10px] transition-colors text-left truncate border border-white/5 cursor-pointer"
-                >
-                  {chip}
-                </button>
-              ))}
+              {[
+                '⚡ Summarize B+ Trees',
+                '🔍 TCP Congestion Formula',
+                '📝 Generate 5 Quiz Questions',
+              ].map((chip) => {
+                const cleanQuery = chip.replace(/^[^\w\s]+\s*/, '');
+                return (
+                  <button
+                    key={chip}
+                    onClick={() => navigate(`/assistant?q=${encodeURIComponent(cleanQuery)}`)}
+                    className="px-2 py-1 rounded bg-surface-container-highest/60 hover:bg-surface-container-high text-on-surface font-mono text-[10px] transition-colors text-left truncate border border-white/5 cursor-pointer"
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
             </div>
+
           </GlassCard>
 
           {/* 3.c Upcoming Deadlines */}

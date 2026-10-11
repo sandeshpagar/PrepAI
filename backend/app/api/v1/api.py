@@ -11,6 +11,7 @@ from app.api.routes import (
     calendar,
     dashboard,
     documents,
+    chat,
 )
 
 api_router = APIRouter()
@@ -25,3 +26,5 @@ api_router.include_router(planner.router)
 api_router.include_router(calendar.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(documents.router)
+api_router.include_router(chat.router)
+
