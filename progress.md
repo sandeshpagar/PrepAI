@@ -7,16 +7,17 @@
 - [x] Phase 1 — Foundation, design system, auth, database and API skeleton
 - [x] Phase 2 — Subjects, syllabus, tasks, calendar and intelligent planner
 - [x] Phase 3 — Private document library, ingestion and embeddings
-- [ ] Phase 4 — RAG assistant, conversations, retrieval and citations
+- [x] Phase 4 — RAG assistant, conversations, retrieval and citations
 - [ ] Phase 5 — Analytics, dashboard completion, notifications, settings and visual polish
 - [ ] Phase 6 — Integration, security, testing, setup documentation and release readiness
 
-**Current phase:** Phase 3 Completed (Ready for Phase 4)  
-**Last updated:** 2026-10-11  
+**Current phase:** Phase 4 Completed (Ready for Phase 5)  
+**Last updated:** 2026-10-12  
 **Repository/branch:** main  
 **Development environment:** Python 3.13.7, Node v22.19.0, npm 10.9.3, Vite 6.4.4, FastAPI 0.143.0, Uvicorn 0.54.0
 
 ## Phase log
+
 
 ### Phase 1 — Foundation
 **Status:** Complete  
@@ -162,11 +163,45 @@
 **Exit criteria:** All Phase 3 exit criteria met. Proceed to Phase 4.
 
 ### Phase 4 — Academic RAG assistant
-**Status:** Not started  
-**Implemented:** —  
-**Verification evidence:** —  
-**Blockers/risks:** Source citations must map to stored chunk IDs and metadata; retrieval evaluation set is required.  
-**Exit criteria:** Refer to `phasewiseprompt.md` Phase 4.
+**Status:** Complete  
+**Implemented:**
+- **Database & Migration (`backend/migrations/00004_create_conversations_and_messages.sql`):**
+  - Created `conversations` table (`id`, `user_id`, `title`, `document_ids`, `created_at`, `updated_at`).
+  - Created `chat_messages` table (`id`, `conversation_id`, `user_id`, `role`, `content`, `citations`, `retrieval_metadata`, `created_at`).
+  - Performance indexes on `(user_id, updated_at DESC)` and `(conversation_id, created_at ASC)`.
+  - Strict Row Level Security (RLS) policies on both tables enforcing `auth.uid() = user_id`.
+- **FastAPI Schemas & Repository Layer:**
+  - `backend/app/schemas/chat.py`: Pydantic models for `Citation`, `ChatMessageCreate`, `ChatMessageResponse`, `ConversationCreate`, `ConversationResponse`, `ConversationDetailResponse`.
+  - `backend/app/repositories/chat_repo.py`: User-scoped conversation & message data store with automatic message count tracking and dev sample chat seeding.
+- **RAG Engine & Grounding Services (`backend/app/services/chat/service.py`):**
+  - Query vector generation via local Ollama (`nomic-embed-text`, 768-dim).
+  - Cosine similarity vector search with user-isolation and optional document scope filtering (`document_ids`).
+  - Strict minimum relevance thresholding (default `0.25`).
+  - Insufficient-evidence detection path: clearly acknowledges when query exceeds available study materials without hallucinating fake citations.
+  - Server-side citation guardrail: parses citation tags, resolves document title, page/slide label, and verbatim quote against database chunk metadata, discarding any ungrounded IDs.
+  - Local Ollama chat inference (`qwen2.5:7b`).
+- **RESTful Endpoints (`/api/v1/conversations`, `/api/v1/chat`):**
+  - Conversation CRUD: `GET /conversations`, `POST /conversations`, `GET /conversations/{id}`, `PATCH /conversations/{id}`, `DELETE /conversations/{id}`.
+  - Message exchange: `POST /conversations/{id}/messages` with grounded answers and resolved citations.
+- **Frontend Academic Assistant Experience:**
+  - `frontend/src/types/assistant.ts`: TypeScript contracts for chats and citations.
+  - `frontend/src/features/assistant/CitationModal.tsx`: Source inspector popup showing document title, page/slide number, similarity percentage, and chunk excerpt.
+  - `frontend/src/features/assistant/AssistantPage.tsx`: Stitch Glassmorphism layout with conversation history sidebar, document scope filter dropdown, student/assistant message thread, citation pills, copy answer button, typing indicator, and quick-prompt suggestion chips.
+  - `frontend/src/features/dashboard/DashboardPage.tsx`: Wired up "Quick Ask PrepAI" input and prompt chips to navigate to `/assistant?q=...` with auto-submission.
+**Verification evidence:**
+- Backend pytest suite (`pytest -c pytest.ini tests -v`): **29/29 passed in 3.63s with zero warnings**:
+  - `test_cosine_similarity_math` PASSED
+  - `test_retrieval_user_isolation_and_document_filter` PASSED
+  - `test_insufficient_evidence_path` PASSED
+  - `test_citation_guardrail_resolution` PASSED
+  - `test_conversation_api_lifecycle` PASSED
+  - All Phase 1, 2, and 3 tests (24 tests) PASSED
+- Frontend production build (`npm run build`):
+  - Zero TypeScript compilation errors.
+  - Vite bundled 1,966 modules in 5.80s.
+**Blockers/risks:** None. Phase 4 exit criteria are fully satisfied.  
+**Exit criteria:** All Phase 4 exit criteria met. Proceed to Phase 5.
+
 
 ### Phase 5 — Dashboard, analytics and settings
 **Status:** Not started  
