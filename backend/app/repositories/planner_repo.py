@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import uuid
 from typing import Any, Dict, List, Optional
+from app.core.config import settings
 
 
 class PlannerRepository:
@@ -16,9 +17,217 @@ class PlannerRepository:
         self.assessments: Dict[str, Dict[str, Any]] = {}
         self.availability: Dict[str, Dict[str, Any]] = {}
         self.sessions: Dict[str, Dict[str, Any]] = {}
+        if settings.ENVIRONMENT == "development":
+            self._seed_development_data()
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
+
+    def _seed_development_data(self):
+        user_id = "dev-student-1"
+        now = self._now()
+        today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+
+        # 1. Subjects
+        sub1_id = "sub-dbms"
+        self.subjects[sub1_id] = {
+            "id": sub1_id,
+            "user_id": user_id,
+            "title": "Database Management Systems",
+            "code": "CS302",
+            "color": "#43E58B",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-bplus"] = {
+            "id": "top-bplus",
+            "subject_id": sub1_id,
+            "user_id": user_id,
+            "title": "B+ Tree Indexing & Query Optimizations",
+            "importance": 5,
+            "estimated_minutes": 45,
+            "difficulty": 4,
+            "status": "completed",
+            "order_index": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-acid"] = {
+            "id": "top-acid",
+            "subject_id": sub1_id,
+            "user_id": user_id,
+            "title": "ACID Properties & Concurrency Control",
+            "importance": 4,
+            "estimated_minutes": 60,
+            "difficulty": 3,
+            "status": "in_progress",
+            "order_index": 2,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-2pc"] = {
+            "id": "top-2pc",
+            "subject_id": sub1_id,
+            "user_id": user_id,
+            "title": "Distributed 2-Phase Commit",
+            "importance": 4,
+            "estimated_minutes": 45,
+            "difficulty": 5,
+            "status": "todo",
+            "order_index": 3,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        sub2_id = "sub-cn"
+        self.subjects[sub2_id] = {
+            "id": sub2_id,
+            "user_id": user_id,
+            "title": "Computer Networks",
+            "code": "CS305",
+            "color": "#8353E2",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-tcp"] = {
+            "id": "top-tcp",
+            "subject_id": sub2_id,
+            "user_id": user_id,
+            "title": "TCP Congestion Control (Reno vs Cubic)",
+            "importance": 5,
+            "estimated_minutes": 45,
+            "difficulty": 4,
+            "status": "completed",
+            "order_index": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-bgp"] = {
+            "id": "top-bgp",
+            "subject_id": sub2_id,
+            "user_id": user_id,
+            "title": "DNS & BGP Routing Protocols",
+            "importance": 4,
+            "estimated_minutes": 60,
+            "difficulty": 4,
+            "status": "todo",
+            "order_index": 2,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        sub3_id = "sub-py"
+        self.subjects[sub3_id] = {
+            "id": sub3_id,
+            "user_id": user_id,
+            "title": "Advanced Python Programming",
+            "code": "CS201",
+            "color": "#E59F43",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.topics["top-rag"] = {
+            "id": "top-rag",
+            "subject_id": sub3_id,
+            "user_id": user_id,
+            "title": "RAG Architecture & Vector Indexing",
+            "importance": 5,
+            "estimated_minutes": 45,
+            "difficulty": 4,
+            "status": "completed",
+            "order_index": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        # 2. Upcoming Assessment / Exam
+        self.assessments["exam-cn"] = {
+            "id": "exam-cn",
+            "user_id": user_id,
+            "subject_id": sub2_id,
+            "title": "Computer Networks Midterm",
+            "assessment_date": today + timedelta(days=3, hours=10),
+            "notes": "Units 1-4: TCP congestion, IP subnetting, and sliding window protocols.",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        # 3. Tasks
+        self.tasks["task-db3"] = {
+            "id": "task-db3",
+            "user_id": user_id,
+            "subject_id": sub1_id,
+            "title": "Database Assignment 3 (SQL Triggers & Stored Procedures)",
+            "description": "Implement trigger logic for banking transaction integrity.",
+            "category": "assignment",
+            "priority": "high",
+            "estimated_duration_minutes": 60,
+            "due_date": today + timedelta(days=4, hours=23, minutes=59),
+            "status": "in_progress",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.tasks["task-tcp-rev"] = {
+            "id": "task-tcp-rev",
+            "user_id": user_id,
+            "subject_id": sub2_id,
+            "title": "Review TCP Congestion Flowcharts & State Machine",
+            "description": "Slow start, congestion avoidance, fast retransmit, fast recovery.",
+            "category": "revision",
+            "priority": "urgent",
+            "estimated_duration_minutes": 45,
+            "due_date": today + timedelta(days=1, hours=18),
+            "status": "todo",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        # 4. Today's Study Sessions
+        self.sessions["sess-1"] = {
+            "id": "sess-1",
+            "user_id": user_id,
+            "subject_id": sub3_id,
+            "title": "RAG Architecture & Vector Indexing",
+            "start_time": today + timedelta(hours=9),
+            "end_time": today + timedelta(hours=9, minutes=45),
+            "duration_minutes": 45,
+            "status": "completed",
+            "session_type": "study",
+            "priority_score": 0.95,
+            "reasoning": "High difficulty syllabus topic prioritized for early morning focus.",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.sessions["sess-2"] = {
+            "id": "sess-2",
+            "user_id": user_id,
+            "subject_id": sub1_id,
+            "title": "B+ Tree Indexing & Query Optimizations",
+            "start_time": today + timedelta(hours=10, minutes=15),
+            "end_time": today + timedelta(hours=11),
+            "duration_minutes": 45,
+            "status": "in_progress",
+            "session_type": "study",
+            "priority_score": 0.88,
+            "reasoning": "Midterm core syllabus topic following standard study window.",
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.sessions["sess-3"] = {
+            "id": "sess-3",
+            "user_id": user_id,
+            "subject_id": sub2_id,
+            "title": "TCP Congestion Control (Reno vs Cubic)",
+            "start_time": today + timedelta(hours=14),
+            "end_time": today + timedelta(hours=14, minutes=45),
+            "duration_minutes": 45,
+            "status": "planned",
+            "session_type": "revision",
+            "priority_score": 0.85,
+            "reasoning": "Critical revision session ahead of Friday midterm.",
+            "created_at": now,
+            "updated_at": now,
+        }
 
     # -------------------------------------------------------------------------
     # Subjects

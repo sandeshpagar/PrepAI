@@ -24,7 +24,11 @@ export async function apiClient<T>(
   } = await supabase.auth.getSession();
 
   const headers = new Headers(options.headers || {});
-  headers.set('Content-Type', 'application/json');
+
+  // Do not set Content-Type for FormData; browser must set boundary automatically
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   if (session?.access_token) {
     headers.set('Authorization', `Bearer ${session.access_token}`);
