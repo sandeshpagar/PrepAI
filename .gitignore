@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Production build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Python virtual environment & cache
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Environment variables & secrets (CRITICAL: never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Local tooling & runner shims
+powershell.cmd
+**/powershell.cmd
+.DS_Store
+Thumbs.db
+*.log

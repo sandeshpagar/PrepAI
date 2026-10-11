@@ -1,0 +1,54 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    overflow-x: hidden;
+  }
+}
+
+/* Glassmorphism surface tiers without nested blurs */
+.glass-panel-1 {
+  background-color: var(--glass-level-1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--edge-neutral);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+}
+
+.glass-panel-2 {
+  background-color: var(--glass-level-2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--edge-elevated);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.50), 0 0 16px -2px rgba(139, 124, 255, 0.12);
+}
+
+.glass-panel-3 {
+  background-color: var(--glass-level-3);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 24px 64px 0 rgba(0, 0, 0, 0.70), 0 0 32px 0 rgba(67, 229, 139, 0.15);
+}
+
+/* Specular top-edge highlight */
+.specular-top-edge {
+  position: relative;
+}
+.specular-top-edge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  pointer-events: none;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}

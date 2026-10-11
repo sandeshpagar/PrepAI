@@ -1,0 +1,24 @@
+:root {
+  --bg-base: #080B12;
+  --bg-elevated: #101522;
+  --text-primary: #F5F7FF;
+  --text-secondary: #B6BECE;
+  --text-muted: #8B95A8;
+
+  /* Operational & semantic accents */
+  --accent-emerald: #43E58B;
+  --accent-violet: #8B7CFF;
+  --accent-cyan: #38BDF8;
+  --accent-amber: #FFAD55;
+  --accent-rose: #F43F5E;
+
+  /* Glass levels */
+  --glass-level-1: rgba(18, 22, 35, 0.72);
+  --glass-level-2: rgba(24, 29, 47, 0.82);
+  --glass-level-3: rgba(32, 38, 62, 0.90);
+
+  /* Borders & Specular Sheen */
+  --edge-neutral: rgba(255, 255, 255, 0.10);
+  --edge-elevated: rgba(255, 255, 255, 0.16);
+  --edge-glow: rgba(139, 124, 255, 0.40);
+}
