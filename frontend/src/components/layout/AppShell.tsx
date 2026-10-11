@@ -22,7 +22,7 @@ export const AppShell: React.FC = () => {
       <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64 relative z-10">
         <TopBar onOpenMobileMenu={() => setMobileOpen(true)} />
 
-        <main className="flex-1 w-full pt-16 p-4 sm:p-6 lg:p-8 max-w-[1720px] mx-auto">
+        <main className="flex-1 w-full pt-20 lg:pt-24 px-4 sm:px-6 lg:px-8 pb-8 max-w-[1720px] mx-auto">
           <Outlet />
         </main>
       </div>
