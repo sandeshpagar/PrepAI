@@ -6,12 +6,12 @@
 
 - [x] Phase 1 — Foundation, design system, auth, database and API skeleton
 - [x] Phase 2 — Subjects, syllabus, tasks, calendar and intelligent planner
-- [ ] Phase 3 — Private document library, ingestion and embeddings
+- [x] Phase 3 — Private document library, ingestion and embeddings
 - [ ] Phase 4 — RAG assistant, conversations, retrieval and citations
 - [ ] Phase 5 — Analytics, dashboard completion, notifications, settings and visual polish
 - [ ] Phase 6 — Integration, security, testing, setup documentation and release readiness
 
-**Current phase:** Phase 2 Completed (Ready for Phase 3)  
+**Current phase:** Phase 3 Completed (Ready for Phase 4)  
 **Last updated:** 2026-10-11  
 **Repository/branch:** main  
 **Development environment:** Python 3.13.7, Node v22.19.0, npm 10.9.3, Vite 6.4.4, FastAPI 0.143.0, Uvicorn 0.54.0
@@ -114,11 +114,52 @@
 **Exit criteria:** All Phase 2 exit criteria met. Proceed to Phase 3.
 
 ### Phase 3 — Document ingestion and embeddings
-**Status:** Not started  
-**Implemented:** —  
-**Verification evidence:** —  
-**Blockers/risks:** Finalize the embedding model and actual vector dimension before applying the vector schema; Ollama must be installed and reachable from the backend.  
-**Exit criteria:** Refer to `phasewiseprompt.md` Phase 3.
+**Status:** Complete  
+**Implemented:**
+- **Database & Migration (`backend/migrations/00003_create_documents_and_vectors.sql`):**
+  - Enabled PostgreSQL `vector` extension (`pgvector`).
+  - Created `documents` table with check constraints, foreign keys, and RLS (`auth.uid() = user_id`).
+  - Created `document_chunks` table with `vector(768)` matching `nomic-embed-text` and an HNSW cosine index (`vector_cosine_ops`).
+  - Configured private Supabase Storage bucket `documents` (25MB file size limit) and scoped storage RLS policies.
+  - Implemented `match_document_chunks` similarity search RPC function.
+- **Multi-Format Parsers (`backend/app/services/documents/parser.py`):**
+  - Pure-Python parsers for PDF (`pypdf`), DOCX (`python-docx`), PPTX (`python-pptx`), TXT and Markdown.
+  - Preserves exact page numbers (PDF, DOCX) and slide numbers (PPTX) with speaker notes.
+  - Rejects empty, corrupted, and non-selectable/scanned documents with clean explanations.
+- **Bounded Chunking Service (`backend/app/services/documents/chunker.py`):**
+  - Deterministic character chunking (900 chars default, 150 chars overlap).
+  - Sentence and paragraph boundary alignment with page/slide metadata tags.
+- **Local Ollama Embeddings (`backend/app/services/embeddings/ollama.py`):**
+  - Dedicated client generating local 768-dimensional embeddings via `nomic-embed-text`.
+  - Batching support, connection offline detection, missing model alerts, and strict dimension validation.
+- **Ingestion Pipeline & Repository (`backend/app/repositories/document_repo.py`, `pipeline.py`):**
+  - End-to-end user-isolated storage and document lifecycle.
+  - Idempotent retries (purging old chunks to prevent duplicates).
+  - Safe cascade deletion (chunks, vectors, and storage objects).
+- **RESTful Endpoints (`backend/app/api/routes/documents.py`):**
+  - `POST /api/v1/documents/upload` (multipart with file validation and size limit of 25MB).
+  - `GET /api/v1/documents` (filtering by status, subject, file format, and search).
+  - `GET /api/v1/documents/{doc_id}/chunks` (inspect parsed chunks and metadata).
+  - `PATCH /api/v1/documents/{doc_id}` (rename, subject re-assignment).
+  - `POST /api/v1/documents/{doc_id}/retry` (retry ingestion).
+  - `DELETE /api/v1/documents/{doc_id}` (cascade deletion).
+- **Frontend Components (`frontend/src/features/documents/`):**
+  - `types/document.ts`: TypeScript schemas for documents, chunks, and formats.
+  - `UploadModal.tsx`: Drag-and-drop upload modal with format pills and subject assignment.
+  - `ChunkPreviewModal.tsx`: Real-time inspector for parsed chunks with page/slide labels.
+  - `DocumentsPage.tsx`: Full Stitch Glassmorphism repository with real-time status polling, format filters, search, rename, retry, and delete workflows.
+**Verification evidence:**
+- Backend test suite (`pytest -c pytest.ini tests -v`): **24/24 passed in 3.36s with zero warnings**:
+  - `test_document_parsers.py` (PDF, DOCX, PPTX, TXT/MD, empty, unsupported) PASSED
+  - `test_document_chunker.py` (basic, overlap, sliding window) PASSED
+  - `test_document_embeddings.py` (dimension assertion, offline handling) PASSED
+  - `test_document_api.py` (end-to-end lifecycle, ownership isolation, retry idempotency, deletion, rejections) PASSED
+  - All existing Phase 1 & Phase 2 tests (13 tests) PASSED
+- Frontend production build (`npm run build`):
+  - Zero TypeScript errors.
+  - Vite bundled 1,965 modules into production assets in 5.88s.
+**Blockers/risks:** None. Phase 3 exit criteria are fully satisfied.  
+**Exit criteria:** All Phase 3 exit criteria met. Proceed to Phase 4.
 
 ### Phase 4 — Academic RAG assistant
 **Status:** Not started  
