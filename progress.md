@@ -8,10 +8,10 @@
 - [x] Phase 2 — Subjects, syllabus, tasks, calendar and intelligent planner
 - [x] Phase 3 — Private document library, ingestion and embeddings
 - [x] Phase 4 — RAG assistant, conversations, retrieval and citations
-- [ ] Phase 5 — Analytics, dashboard completion, notifications, settings and visual polish
+- [x] Phase 5 — Analytics, dashboard completion, notifications, settings and visual polish
 - [ ] Phase 6 — Integration, security, testing, setup documentation and release readiness
 
-**Current phase:** Phase 4 Completed (Ready for Phase 5)  
+**Current phase:** Phase 5 Completed (Ready for Phase 6)  
 **Last updated:** 2026-10-12  
 **Repository/branch:** main  
 **Development environment:** Python 3.13.7, Node v22.19.0, npm 10.9.3, Vite 6.4.4, FastAPI 0.143.0, Uvicorn 0.54.0
@@ -173,13 +173,18 @@
 - **FastAPI Schemas & Repository Layer:**
   - `backend/app/schemas/chat.py`: Pydantic models for `Citation`, `ChatMessageCreate`, `ChatMessageResponse`, `ConversationCreate`, `ConversationResponse`, `ConversationDetailResponse`.
   - `backend/app/repositories/chat_repo.py`: User-scoped conversation & message data store with automatic message count tracking and dev sample chat seeding.
+- **Multi-Format Parsers with On-Device Diagram OCR (`backend/app/services/documents/parser.py`):**
+  - Native on-device hardware-accelerated Windows OCR (`Windows.Media.Ocr`) for extracting diagram/infographic text from embedded slide images with zero cloud dependencies or external binaries.
+  - Substantive diagram filtering (>= 50KB image threshold, >= 100 character OCR threshold) to accurately parse real architecture infographics while skipping repetitive header/logo noise.
+  - Recursive PPTX group shape and table parsing for PowerPoint decks.
 - **RAG Engine & Grounding Services (`backend/app/services/chat/service.py`):**
   - Query vector generation via local Ollama (`nomic-embed-text`, 768-dim).
   - Cosine similarity vector search with user-isolation and optional document scope filtering (`document_ids`).
-  - Strict minimum relevance thresholding (default `0.25`).
-  - Insufficient-evidence detection path: clearly acknowledges when query exceeds available study materials without hallucinating fake citations.
+  - Strict minimum relevance thresholding (`0.25`) and expanded retrieval window (`top_k=8`).
+  - High-speed local Ollama chat inference (`llama3.2:latest`, `num_predict=110`, `num_ctx=1500`, `temperature=0.1`) generating grounded answers in <25 seconds.
   - Server-side citation guardrail: parses citation tags, resolves document title, page/slide label, and verbatim quote against database chunk metadata, discarding any ungrounded IDs.
-  - Local Ollama chat inference (`qwen2.5:7b`).
+- **Local Dev Persistence (`backend/app/repositories/document_repo.py`, `chat_repo.py`):**
+  - Automatic JSON disk backup (`backend/data/dev_documents.json`, `backend/data/dev_chat.json`) preserving uploaded documents, chunks, vectors, conversations, and messages across browser page refreshes and server reboots.
 - **RESTful Endpoints (`/api/v1/conversations`, `/api/v1/chat`):**
   - Conversation CRUD: `GET /conversations`, `POST /conversations`, `GET /conversations/{id}`, `PATCH /conversations/{id}`, `DELETE /conversations/{id}`.
   - Message exchange: `POST /conversations/{id}/messages` with grounded answers and resolved citations.
@@ -189,26 +194,75 @@
   - `frontend/src/features/assistant/AssistantPage.tsx`: Stitch Glassmorphism layout with conversation history sidebar, document scope filter dropdown, student/assistant message thread, citation pills, copy answer button, typing indicator, and quick-prompt suggestion chips.
   - `frontend/src/features/dashboard/DashboardPage.tsx`: Wired up "Quick Ask PrepAI" input and prompt chips to navigate to `/assistant?q=...` with auto-submission.
 **Verification evidence:**
-- Backend pytest suite (`pytest -c pytest.ini tests -v`): **29/29 passed in 3.63s with zero warnings**:
+- Backend pytest suite (`pytest -c pytest.ini tests -v`): **29/29 passed in 3.85s with zero warnings**:
   - `test_cosine_similarity_math` PASSED
   - `test_retrieval_user_isolation_and_document_filter` PASSED
   - `test_insufficient_evidence_path` PASSED
   - `test_citation_guardrail_resolution` PASSED
   - `test_conversation_api_lifecycle` PASSED
   - All Phase 1, 2, and 3 tests (24 tests) PASSED
+- End-to-end user document test on `DEEPSEADEVS_ECE.pdf`:
+  - Ingestion & OCR: completed in 6.96s (19 clean chunks indexed).
+  - Query 1 (*"who are the end users of the system"*): returned grounded answer citing Page 2 & Page 4 in ~24s.
+  - Query 2 (*"what is the tech stack of the project"*): returned complete grounded stack (Python 3.13, FastAPI, Supabase, PostgreSQL, LangGraph, React, TypeScript, Leaflet, etc.) citing Page 3 & Page 4 in ~18s.
 - Frontend production build (`npm run build`):
   - Zero TypeScript compilation errors.
-  - Vite bundled 1,966 modules in 5.80s.
+  - Vite bundled 1,966 modules into production assets in 6.90s.
 **Blockers/risks:** None. Phase 4 exit criteria are fully satisfied.  
 **Exit criteria:** All Phase 4 exit criteria met. Proceed to Phase 5.
 
 
 ### Phase 5 — Dashboard, analytics and settings
-**Status:** Not started  
-**Implemented:** —  
-**Verification evidence:** —  
-**Blockers/risks:** Do not present fixture data as real user analytics.  
-**Exit criteria:** Refer to `phasewiseprompt.md` Phase 5.
+**Status:** Complete  
+**Implemented:**
+- **Academic Analytics Engine (`backend/app/services/analytics.py` & `backend/app/api/routes/analytics.py`):**
+  - Schema (`backend/app/schemas/analytics.py`): `DailyStudyPoint`, `SubjectProgressMetric`, `TaskCompletionMetric`, `SessionMetric`, `ConsistencyMetric`, `ActivityEvent`, and `AnalyticsOverviewResponse`.
+  - Service: computes actual planned vs completed study time from persisted study sessions without fabricated numbers, 7-day and 30-day timeframes, real active streak calculation, longest streak tracking, and recent activity audit stream.
+  - Endpoints: `GET /api/v1/analytics/overview?timeframe=week|month`, `GET /api/v1/analytics/streak`, `GET /api/v1/analytics/activity`.
+- **User Settings & Preferences System (`backend/app/repositories/settings_repo.py` & `backend/app/api/routes/settings.py`):**
+  - Schema (`backend/app/schemas/settings.py`): `UserSettingsBase`, `UserSettingsUpdate`, `UserSettingsResponse` with validation for target study hours (0.5h-16h), preferred session duration (15m-180m), exam lead days (1d-30d), and notification preferences.
+  - Repository: scoped per authenticated `user_id` with default values and update persistence.
+  - Integration: updated `GET /api/v1/dashboard/summary` to read user-configured `target_study_hours` instead of hardcoded 4.0, and dynamic `current_streak_days` instead of hardcoded 7.
+- **In-App Notifications Engine (`backend/app/repositories/notification_repo.py` & `backend/app/api/routes/notifications.py`):**
+  - Schema (`backend/app/schemas/notification.py`): `NotificationResponse`, `NotificationsListResponse`.
+  - Repository: dynamically checks for upcoming exams within configured lead days, tasks due within 48 hours, and successfully indexed documents. Uses deterministic deduplication keys (`exam_{id}_{date}`, `task_{id}_{date}`, `doc_{id}_indexed`) to prevent duplicate notices on repeated requests.
+  - Endpoints: `GET /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/read`, `POST /api/v1/notifications/mark-all-read`.
+- **Frontend TopBar Notifications (`frontend/src/components/layout/NotificationDropdown.tsx`):**
+  - Animated unread counter badge in `TopBar.tsx`.
+  - Dropdown menu with icons by alert type, title, message, and "Mark all read" control.
+  - Clicking a notification marks it as read and deep-links to the target route (`/calendar`, `/tasks`, `/documents`).
+- **Frontend Dashboard Polish (`frontend/src/features/dashboard/DashboardPage.tsx`):**
+  - Replaced placeholder values with live data from `/dashboard/summary` and `/analytics/overview?timeframe=week`.
+  - Embedded `WeeklyStudyChart` visualizing planned vs completed hours across 7 days with tooltips and empty state.
+  - Embedded `RecentActivityFeed` streaming verified user events.
+  - Updated consistency streak card with live streak and best streak.
+- **Frontend Progress & Analytics Screen (`frontend/src/features/analytics/AnalyticsPage.tsx`):**
+  - Full screen implementation replacing placeholder: Last 7 Days vs Last 30 Days toggle tabs.
+  - Summary metric cards: Study Logged (with target % completion), Tasks Completed (with overdue alerts), Current Streak (active habit indicator), and Active Days (consistency rate).
+  - Daily Study Hours Trend chart (custom responsive SVG/CSS bar chart with tooltips).
+  - Subject Syllabus Coverage list with color-coded progress bars and module counts.
+  - Task Status Distribution cards and honest empty states.
+- **Frontend Account & Study Settings Screen (`frontend/src/features/settings/SettingsPage.tsx`):**
+  - Profile card: Display Name, University, Major with authenticated user ID.
+  - Study Habits card: Daily study goal slider (1h - 12h), session duration chips (25m Pomodoro, 45m Standard, 60m Deep Work, 90m Extended), exam alert lead days (3d, 7d, 14d).
+  - Reminder toggles: upcoming deadlines, session reminders, document indexing.
+  - Security & Privacy card detailing RLS isolation and local Ollama privacy.
+  - "Save Changes" button calling `PATCH /settings` with instant feedback toast.
+**Verification evidence:**
+- Backend pytest suite (`pytest -c backend/pytest.ini backend/tests -v`): **33/33 passed in 5.78s with zero warnings**:
+  - `test_empty_analytics_for_new_user` PASSED
+  - `test_analytics_calculation_with_sessions` PASSED
+  - `test_settings_lifecycle_and_dashboard_integration` PASSED
+  - `test_notification_sync_and_deduplication` PASSED
+  - All Phase 1-4 tests (29 tests) PASSED
+- Frontend production build (`npm run build`):
+  - Zero TypeScript compilation errors.
+  - Vite bundled 1,969 modules into production assets in 5.62s.
+- Visual & Responsive check across 9 core screens:
+  - `/` (Dashboard), `/planner` (Study Planner), `/tasks` (Tasks), `/calendar` (Calendar), `/assistant` (AI Assistant), `/documents` (Documents), `/analytics` (Analytics), `/settings` (Settings), `/login` (Auth).
+  - All cards adhere to `design.md` Level 1/2 frosted glass tokens with high-contrast text and zero nested blurs.
+**Blockers/risks:** None. Phase 5 exit criteria are completely satisfied.  
+**Exit criteria:** All Phase 5 exit criteria met. Proceed to Phase 6.
 
 ### Phase 6 — Hardening and release readiness
 **Status:** Not started  
