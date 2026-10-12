@@ -5,6 +5,9 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiClient } from '@/lib/api-client';
 import { DashboardSummary, StudySession } from '@/types/planner';
+import { AnalyticsOverview } from '@/types/analytics';
+import { WeeklyStudyChart } from './components/WeeklyStudyChart';
+import { RecentActivityFeed } from './components/RecentActivityFeed';
 import {
   Calendar as CalendarIcon,
   Zap,
@@ -29,17 +32,21 @@ export const DashboardPage: React.FC = () => {
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Learner';
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingSessionId, setUpdatingSessionId] = useState<string | null>(null);
   const [quickQuery, setQuickQuery] = useState('');
 
-
   const fetchSummary = async () => {
     try {
-      const data = await apiClient<DashboardSummary>('/dashboard/summary');
-      setSummary(data);
+      const [sumData, analData] = await Promise.all([
+        apiClient<DashboardSummary>('/dashboard/summary'),
+        apiClient<AnalyticsOverview>('/analytics/overview?timeframe=week'),
+      ]);
+      setSummary(sumData);
+      setAnalytics(analData);
     } catch (err) {
-      console.error('Failed to load dashboard summary:', err);
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -76,7 +83,7 @@ export const DashboardPage: React.FC = () => {
   const tasksCompleted = summary?.tasks_completed_count ?? 0;
   const tasksTotal = summary?.tasks_total_count ?? 0;
   const upcomingExams = summary?.upcoming_exams_count ?? 0;
-  const streakDays = summary?.streak_days ?? 7;
+  const streakDays = summary?.streak_days ?? 0;
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -237,11 +244,18 @@ export const DashboardPage: React.FC = () => {
               {streakDays} <span className="text-sm text-on-surface-variant font-normal">days active</span>
             </div>
             <div className="flex items-center justify-between mt-1 text-xs">
-              <span className="text-primary font-medium font-mono">Consistent Study Habit</span>
-              <span className="text-on-surface-variant font-mono text-[11px]">Best: 14d</span>
+              <span className="text-primary font-medium font-mono">
+                {streakDays > 0 ? 'Consistent Study Habit' : 'Start Your Habit Today'}
+              </span>
+              <span className="text-on-surface-variant font-mono text-[11px]">
+                Best: {analytics?.consistency.longest_streak_days ?? streakDays}d
+              </span>
             </div>
             <div className="w-full bg-surface-container-highest rounded-full h-1.5 mt-3 overflow-hidden">
-              <div className="bg-primary h-full rounded-full w-4/5 shadow-glow-primary" />
+              <div
+                className="bg-primary h-full rounded-full transition-all shadow-glow-primary"
+                style={{ width: `${Math.min(100, Math.max(streakDays > 0 ? 15 : 0, streakDays * 14))}%` }}
+              />
             </div>
           </div>
         </GlassCard>
@@ -392,7 +406,10 @@ export const DashboardPage: React.FC = () => {
             </div>
           </GlassCard>
 
-          {/* 3.b Subject-wise Syllabus Progress */}
+          {/* 3.b Weekly Study Consistency Chart */}
+          <WeeklyStudyChart dailyTrend={analytics?.daily_trend || []} />
+
+          {/* 3.c Subject-wise Syllabus Progress */}
           <GlassCard level={1} className="p-5 sm:p-6 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
@@ -451,6 +468,9 @@ export const DashboardPage: React.FC = () => {
               </div>
             )}
           </GlassCard>
+
+          {/* 3.d Recent Activity Stream */}
+          <RecentActivityFeed activities={analytics?.recent_activity || []} />
         </div>
 
         {/* RIGHT COLUMN (4 cols) */}
