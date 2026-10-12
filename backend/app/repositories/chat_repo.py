@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+import json
+import os
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -7,15 +9,69 @@ class ChatRepository:
     """
     User-scoped repository for Conversations and Chat Messages.
     Enforces strict user isolation: User A cannot read or modify User B's chats.
+    Includes automatic disk persistence in local development mode.
     """
 
     def __init__(self):
         self.conversations: Dict[str, Dict[str, Any]] = {}
         self.messages: Dict[str, Dict[str, Any]] = {}
-        self._seed_development_chat()
+        self._store_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "dev_chat.json"
+        )
+        if not self._load_from_disk():
+            self._seed_development_chat()
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
+
+    def _save_to_disk(self):
+        try:
+            from app.core.config import settings
+            if settings.ENVIRONMENT == "test":
+                return
+            os.makedirs(os.path.dirname(self._store_file), exist_ok=True)
+
+            def serialize_val(v):
+                if isinstance(v, datetime):
+                    return v.isoformat()
+                return v
+
+            payload = {
+                "conversations": {
+                    k: {field: serialize_val(val) for field, val in conv.items()}
+                    for k, conv in self.conversations.items()
+                },
+                "messages": {
+                    k: {field: serialize_val(val) for field, val in msg.items()}
+                    for k, msg in self.messages.items()
+                },
+            }
+            with open(self._store_file, "w", encoding="utf-8") as f:
+                json.dump(payload, f)
+        except Exception:
+            pass
+
+    def _load_from_disk(self) -> bool:
+        try:
+            if os.path.exists(self._store_file):
+                with open(self._store_file, "r", encoding="utf-8") as f:
+                    payload = json.load(f)
+                loaded_convs = payload.get("conversations", {})
+                for k, conv in loaded_convs.items():
+                    if "created_at" in conv and isinstance(conv["created_at"], str):
+                        conv["created_at"] = datetime.fromisoformat(conv["created_at"])
+                    if "updated_at" in conv and isinstance(conv["updated_at"], str):
+                        conv["updated_at"] = datetime.fromisoformat(conv["updated_at"])
+                    self.conversations[k] = conv
+                loaded_msgs = payload.get("messages", {})
+                for k, msg in loaded_msgs.items():
+                    if "created_at" in msg and isinstance(msg["created_at"], str):
+                        msg["created_at"] = datetime.fromisoformat(msg["created_at"])
+                    self.messages[k] = msg
+                return len(self.conversations) > 0
+        except Exception:
+            pass
+        return False
 
     def _seed_development_chat(self):
         conv_id = "conv-dev-welcome"
@@ -60,7 +116,7 @@ class ChatRepository:
                     "similarity_score": 0.92,
                 }
             ],
-            "retrieval_metadata": {"model": "qwen2.5:7b", "chunks_retrieved": 1},
+            "retrieval_metadata": {"model": "llama3.2:latest", "chunks_retrieved": 1},
             "created_at": now,
         }
 
@@ -97,6 +153,7 @@ class ChatRepository:
             "updated_at": now,
         }
         self.conversations[item_id] = record
+        self._save_to_disk()
         return {**record, "message_count": 0, "messages": []}
 
     def update_conversation(
@@ -107,6 +164,7 @@ class ChatRepository:
             return None
         c["title"] = title.strip()
         c["updated_at"] = self._now()
+        self._save_to_disk()
         msgs = self.get_messages(user_id, conversation_id)
         return {**c, "message_count": len(msgs), "messages": msgs}
 
@@ -119,6 +177,7 @@ class ChatRepository:
         for mid in to_del:
             del self.messages[mid]
         del self.conversations[conversation_id]
+        self._save_to_disk()
         return True
 
     # -------------------------------------------------------------------------
@@ -159,6 +218,7 @@ class ChatRepository:
         if conversation_id in self.conversations:
             self.conversations[conversation_id]["updated_at"] = now
 
+        self._save_to_disk()
         return dict(record)
 
 
