@@ -40,6 +40,19 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <>
@@ -49,6 +62,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
           <div className="flex items-center gap-3 flex-1 max-w-xl">
             <button
               onClick={onOpenMobileMenu}
+              aria-label="Open navigation menu"
               className="lg:hidden p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5" />
@@ -64,7 +78,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
             <div className="relative flex-1 hidden md:block">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
               <input
+                ref={searchInputRef}
                 type="text"
+                aria-label="Search study workspace"
                 placeholder="Search topics, syllabus, tasks, lecture notes..."
                 className="w-full pl-9 pr-12 py-1.5 rounded-lg bg-surface-container-lowest/80 border border-white/5 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30 transition-all"
               />
@@ -81,6 +97,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
               <GlassButton
                 variant="primary"
                 size="sm"
+                aria-haspopup="true"
+                aria-expanded={isMenuOpen}
                 className="hidden sm:inline-flex text-xs font-semibold"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
               >
@@ -152,15 +170,23 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
               <NotificationDropdown />
 
               <button
-                className="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
-                title="Focus Mode"
+                onClick={() => setIsFocusMode((prev) => !prev)}
+                aria-label="Toggle focus mode"
+                aria-pressed={isFocusMode}
+                className={`p-2 rounded-lg transition-colors ${
+                  isFocusMode
+                    ? 'text-primary bg-primary/20 ring-1 ring-primary/40'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+                }`}
+                title={isFocusMode ? 'Focus Mode Active (Click to exit)' : 'Toggle Focus Mode'}
               >
                 <Zap className="w-4 h-4" />
               </button>
 
               <button
                 className="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
-                title="Assistant Help"
+                title="AI Study Assistant"
+                aria-label="Open AI Study Assistant"
                 onClick={() => navigate('/assistant')}
               >
                 <HelpCircle className="w-4 h-4" />

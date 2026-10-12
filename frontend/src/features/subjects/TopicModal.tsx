@@ -28,6 +28,17 @@ export const TopicModal: React.FC<TopicModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,10 +69,16 @@ export const TopicModal: React.FC<TopicModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="topic-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+    >
       <GlassCard level={3} className="w-full max-w-md p-6 relative">
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 p-1 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors"
         >
           <X className="w-5 h-5" />
@@ -72,7 +89,7 @@ export const TopicModal: React.FC<TopicModalProps> = ({
             <ListPlus className="w-4 h-4 text-secondary" />
           </div>
           <div>
-            <h2 className="font-headline text-base font-bold text-on-surface">Add Syllabus Topic</h2>
+            <h2 id="topic-modal-title" className="font-headline text-base font-bold text-on-surface">Add Syllabus Topic</h2>
             <p className="text-xs text-on-surface-variant truncate">To: {subjectTitle}</p>
           </div>
         </div>

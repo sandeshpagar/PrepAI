@@ -24,13 +24,26 @@ export const ChunkPreviewModal: React.FC<ChunkPreviewModalProps> = ({
         .then(setChunks)
         .catch((err) => console.error('Failed to load chunks:', err))
         .finally(() => setLoading(false));
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [document]);
+  }, [document, onClose]);
 
   if (!document) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chunk-preview-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in"
+    >
       <GlassCard level={2} className="w-full max-w-2xl max-h-[85vh] flex flex-col p-6 shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -38,7 +51,7 @@ export const ChunkPreviewModal: React.FC<ChunkPreviewModalProps> = ({
               <Layers className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-headline text-lg font-bold text-on-surface truncate max-w-md">
+              <h3 id="chunk-preview-title" className="font-headline text-lg font-bold text-on-surface truncate max-w-md">
                 {document.title} — Indexed Chunks
               </h3>
               <p className="text-xs text-on-surface-variant font-mono">
@@ -48,6 +61,7 @@ export const ChunkPreviewModal: React.FC<ChunkPreviewModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-1 rounded-lg text-on-surface-variant hover:text-on-surface"
           >
             <X className="w-5 h-5" />

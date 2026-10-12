@@ -10,18 +10,35 @@ interface CitationModalProps {
 }
 
 export const CitationModal: React.FC<CitationModalProps> = ({ citation, onClose }) => {
+  React.useEffect(() => {
+    if (!citation) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [citation, onClose]);
+
   if (!citation) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="citation-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in"
+    >
       <GlassCard level={2} className="w-full max-w-lg flex flex-col p-6 shadow-2xl">
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-primary" />
-            <h3 className="font-headline text-lg font-bold text-on-surface">Verified Source Citation</h3>
+            <h3 id="citation-modal-title" className="font-headline text-lg font-bold text-on-surface">Verified Source Citation</h3>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-1 rounded-lg text-on-surface-variant hover:text-on-surface"
           >
             <X className="w-5 h-5" />
