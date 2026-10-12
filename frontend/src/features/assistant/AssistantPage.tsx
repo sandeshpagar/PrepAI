@@ -157,16 +157,16 @@ export const AssistantPage: React.FC = () => {
       // Refresh conversations list to update title
       const refreshedConvs = await apiClient<Conversation[]>('/conversations');
       setConversations(refreshedConvs);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to send message:', err);
+      const detail = err?.message || 'Could not retrieve response from local Ollama. Please make sure Ollama is running (`ollama serve`).';
       // Append error message
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,
         conversation_id: activeConvId,
         user_id: 'current-user',
         role: 'assistant',
-        content:
-          'Error: Could not retrieve response from local Ollama. Please make sure Ollama is running (`ollama serve`).',
+        content: `Error: ${detail}`,
         citations: [],
         created_at: new Date().toISOString(),
       };

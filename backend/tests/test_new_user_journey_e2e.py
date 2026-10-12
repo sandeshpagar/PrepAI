@@ -80,7 +80,7 @@ def test_full_new_user_academic_journey():
     sessions = client.get("/api/v1/sessions", headers=headers).json()
     assert len(sessions) >= 1
     target_session = sessions[0]
-    upd_res = client.put(f"/api/v1/sessions/{target_session['id']}", json={"status": "completed"}, headers=headers)
+    upd_res = client.put(f"/api/v1/sessions/{target_session['id']}", json={"status": "completed", "start_time": now.isoformat()}, headers=headers)
     assert upd_res.status_code == 200
 
     # 8. Complete Assignment Task

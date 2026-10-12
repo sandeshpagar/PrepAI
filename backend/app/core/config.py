@@ -40,12 +40,12 @@ class Settings(BaseSettings):
     OLLAMA_CHAT_MODEL: str = "llama3.2:latest"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
     EMBEDDING_DIMENSION: int = 768
-    OLLAMA_REQUEST_TIMEOUT_SECONDS: int = 120
+    OLLAMA_REQUEST_TIMEOUT_SECONDS: int = 240
     OLLAMA_CHAT_TEMPERATURE: float = 0.1
     OLLAMA_NUM_PREDICT: int = 512
 
     # RAG Configuration
-    RAG_TOP_K: int = 8
+    RAG_TOP_K: int = 5
     RAG_CHUNK_SIZE: int = 800
     RAG_CHUNK_OVERLAP: int = 150
 

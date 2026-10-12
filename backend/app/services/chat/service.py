@@ -180,6 +180,34 @@ class AcademicRAGService:
                     return data.get("message", {}).get("content", "").strip()
                 else:
                     logger.warning(f"Ollama chat error {res.status_code}: {res.text}")
+                    return (
+                        f"Local Ollama returned error {res.status_code}. "
+                        "Please check the server terminal or model status."
+                    )
+        except httpx.TimeoutException:
+            logger.error("Ollama chat request timed out after %ss", settings.OLLAMA_REQUEST_TIMEOUT_SECONDS)
+            if settings.ENVIRONMENT == "test":
+                first_chunk = context_chunks[0]
+                return (
+                    f"Based on {first_chunk['document_title']} [Chunk 1], "
+                    f"the key subject material covers: {first_chunk['content'][:140]}..."
+                )
+            return (
+                "The local AI model timed out while generating the response on CPU. "
+                "Please try asking a more focused question or re-selecting specific documents."
+            )
+        except httpx.ConnectError:
+            logger.error("Cannot connect to Ollama at %s", settings.OLLAMA_BASE_URL)
+            if settings.ENVIRONMENT == "test":
+                first_chunk = context_chunks[0]
+                return (
+                    f"Based on {first_chunk['document_title']} [Chunk 1], "
+                    f"the key subject material covers: {first_chunk['content'][:140]}..."
+                )
+            return (
+                "Could not connect to local Ollama on port 11434. "
+                "Please verify that Ollama is running (`ollama serve`)."
+            )
         except Exception as e:
             if settings.ENVIRONMENT == "test":
                 logger.info("Test environment: using simulated grounded response.")
@@ -188,7 +216,8 @@ class AcademicRAGService:
                     f"Based on {first_chunk['document_title']} [Chunk 1], "
                     f"the key subject material covers: {first_chunk['content'][:140]}..."
                 )
-            raise RuntimeError(f"Failed to communicate with local Ollama chat model: {str(e)}")
+            logger.exception("Unexpected error in execute_chat_completion: %s", e)
+            return f"An error occurred while communicating with local Ollama: {str(e)}"
 
         return "Unable to generate response from local chat model."
 
@@ -208,7 +237,13 @@ class AcademicRAGService:
             if settings.ENVIRONMENT == "test":
                 query_vector = [0.1] * settings.EMBEDDING_DIMENSION
             else:
-                raise e
+                logger.error("Embedding generation failed: %s", e)
+                return (
+                    f"Unable to generate embeddings for question: {str(e)}. "
+                    "Please ensure Ollama is running and the nomic-embed-text model is available.",
+                    [],
+                    {"status": "embedding_error", "chunks_retrieved": 0},
+                )
 
         # 2. Vector search
         chunks = self.search_relevant_chunks(

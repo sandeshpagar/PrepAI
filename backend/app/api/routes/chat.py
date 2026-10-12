@@ -128,8 +128,10 @@ async def send_message(
     # Effective document filter
     active_docs = payload.document_ids if payload.document_ids is not None else conv.get("document_ids")
 
-    # 2. Execute RAG pipeline
-    answer, citations, meta = rag_service.answer_query(
+    # 2. Execute RAG pipeline in worker thread to prevent blocking the async event loop
+    from starlette.concurrency import run_in_threadpool
+    answer, citations, meta = await run_in_threadpool(
+        rag_service.answer_query,
         user_id=user_id,
         question=question,
         document_ids=active_docs,
