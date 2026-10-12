@@ -148,8 +148,10 @@ class AcademicRAGService:
 
         system_prompt = (
             "You are PrepAI, an expert academic study copilot. "
-            "Answer the student's question accurately, concisely, and solely based on the provided Study Material Chunks. "
-            "Cite your assertions using the format [Chunk X] or [cite: <ID>] corresponding to the chunk used. "
+            "Answer the student's question accurately, directly, and thoroughly solely using the provided Study Material Chunks. "
+            "Always finish your complete thoughts and never leave sentences incomplete. "
+            "Cite your assertions using the format [Chunk X] corresponding to the chunk used. "
+            "Do not include conversational filler. "
             "If the provided context does not contain sufficient details to answer, state clearly: "
             "'Based on your indexed study materials, there is insufficient evidence to answer this question.'"
         )
@@ -164,6 +166,8 @@ class AcademicRAGService:
             ],
             "options": {
                 "temperature": settings.OLLAMA_CHAT_TEMPERATURE,
+                "num_predict": settings.OLLAMA_NUM_PREDICT,
+                "num_ctx": 2048,
             },
             "stream": False,
         }
