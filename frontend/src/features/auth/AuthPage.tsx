@@ -44,7 +44,7 @@ export const AuthPage: React.FC = () => {
         if (error) throw error;
         navigate('/');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -52,7 +52,11 @@ export const AuthPage: React.FC = () => {
           },
         });
         if (error) throw error;
-        setSuccessMessage('Account created! Please check your email to confirm registration or sign in.');
+        if (data?.session) {
+          navigate('/');
+        } else {
+          setSuccessMessage('Account created! Please check your email to confirm registration or sign in.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
