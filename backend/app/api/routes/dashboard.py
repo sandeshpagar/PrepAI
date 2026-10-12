@@ -3,6 +3,8 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends
 from app.api.deps import get_current_user
 from app.repositories.planner_repo import planner_repo
+from app.repositories.settings_repo import settings_repo
+from app.services.analytics import analytics_service
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard Aggregation"])
 
@@ -57,14 +59,17 @@ async def get_dashboard_summary(current_user: Dict[str, Any] = Depends(get_curre
             "total_modules": total_top,
         })
 
+    user_settings = settings_repo.get_settings(user_id)
+    streak_info = analytics_service.calculate_streak(user_id)
+
     return {
         "today_study_hours": round(completed_today_minutes / 60.0, 1),
-        "target_study_hours": 4.0,
+        "target_study_hours": user_settings.get("target_study_hours", 4.0),
         "tasks_completed_count": len(completed_tasks),
         "tasks_total_count": len(tasks),
         "upcoming_exams_count": len(upcoming_exams),
         "upcoming_exam_summary": exam_summary or "No exams in the next 7 days",
-        "streak_days": 7,
+        "streak_days": streak_info.get("current_streak_days", 0),
         "today_sessions": today_sessions,
         "upcoming_deadlines": upcoming_deadlines,
         "subject_progress": subject_progress,
