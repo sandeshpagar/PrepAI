@@ -4,7 +4,6 @@ import { useAuth } from '@/features/auth/AuthContext';
 import {
   Search,
   Plus,
-  Bell,
   Zap,
   HelpCircle,
   Menu,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { UploadModal } from '@/features/documents/UploadModal';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface TopBarProps {
   onOpenMobileMenu?: () => void;
@@ -149,13 +149,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
             </div>
 
             <div className="flex items-center gap-1">
-              <button
-                className="relative p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary shadow-glow-primary" />
-              </button>
+              <NotificationDropdown />
 
               <button
                 className="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
